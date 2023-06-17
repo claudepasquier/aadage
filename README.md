@@ -46,7 +46,7 @@ ADDAGE provides support for two distinct data formats. Among them, one format is
 In the second format, which is specific to AADAGE, a graph is represented by a sequence of lines representing a graph, a node or an edge. The start of a new graph is simply specified with the prefix **g** at the beginning of the line. A line describing a node consists of the prefix **n** followed by the node's id and its attributes separated by colons. An edge is described by a line starting with the prefix **e**, followed by the id of the first node and the id of the second node. For example, a graph composed of three nodes with their respective set of attibutes equal to {1,2}, {2,3,4} and {4}, and edges between node 1 and the two other nodes can be described with the following:
 
 ```
-g
+g 1
 n 1 1:2
 n 2 2:3:4
 n 3 4
