@@ -58,7 +58,7 @@ int absoluteSupport = 0;
 float relativeSupport = 0.0;
 int absoluteMaxSupport = INT_MAX;
 float relativeMaxSupport = 0.0;
-int maximumGap = -1;
+int maximumGap = 0;
 int maxDepth = -1;
 
 /* information on the datasets */
@@ -144,6 +144,10 @@ int processPatternFile(const string& fileName,
 		string line;
 		while (inFile.good()) {
 			getline(inFile, line);
+			size_t found = line.find("\r");
+			if (found != std::string::npos) {
+				line.erase(found);
+			}
 			deque<string> content; // to store tokens
 			split(line, content, " "); // split line
 			if (content.size() < 3)
@@ -185,6 +189,10 @@ int processInputFileSleuth(const string& fileName,
 		string line;
 		while (inFile.good()) {
 			getline(inFile, line);
+            size_t found = line.find("\r");
+			if (found != std::string::npos) {
+				line.erase(found);
+			}
 			deque<string> content; // to store tokens
 			split(line, content, " "); // split line
 			if (content.size() < 3)
