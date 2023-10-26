@@ -1239,7 +1239,7 @@ void extendFirstCandidate(Candidates& candidates, const vector<vector<NodeInfo> 
 			values->insert(values->end(),newValue.begin(),newValue.end());
 		}
 	}
-	bool newOptimisation = true;
+	bool newOptimisation = false;
 	if (newOptimisation){
 		if ((label->back().second == 1) && (label->back().first.size() ==1)){
 			const int pos = label->size()-1;
