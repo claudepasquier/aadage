@@ -189,7 +189,7 @@ int processInputFileSleuth(const string& fileName,
 		string line;
 		while (inFile.good()) {
 			getline(inFile, line);
-            size_t found = line.find("\r");
+			size_t found = line.find("\r");
 			if (found != std::string::npos) {
 				line.erase(found);
 			}
@@ -310,7 +310,9 @@ int processInputFile(const string& fileName,
 				continue;
 			}
 			if ((line[0] == 'g') || (line[0] == 't') ||(line[0] == 'X')){
-				allNodes.push_back(nodes);
+				if (nodes.size() > 0) {
+					allNodes.push_back(nodes);
+				}
 				nodes.clear();
 				nodeId2pos.clear();
 				deque<string> content; // to store tokens
@@ -377,7 +379,6 @@ int processInputFile(const string& fileName,
 		}
 		inFile.close();
 		allNodes.push_back(nodes);
-		nbGraph += 1;
 		return (nbGraph);
 	} else {
 		return (-1);
