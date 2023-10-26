@@ -1977,18 +1977,22 @@ int initializeInputNodes(const string& fileName,
 		cout << "problem reading file '" << inputFile << "'" << endl;
 		return (-1);
 	}
+	int nodeCount = 0;
+	for (vector<vector<NodeInfo> >::const_iterator it = inputNodes.begin();
+		it != inputNodes.end(); it++) {
+		nodeCount += it->size();
+	}
 	if (verbose) {
 		cout << "size of dataset : " << datasetSize << endl;
-		int nodeCount = 0;
-		for (vector<vector<NodeInfo> >::const_iterator it = inputNodes.begin();
-				it != inputNodes.end(); it++) {
-			nodeCount += it->size();
-		}
 		cout << "total number of nodes : " << nodeCount << endl;
 	}
 
 	if (relativeSupport > 0) {
-		absoluteSupport = inputNodes.size() * relativeSupport;
+		if (countUnique) {
+			absoluteSupport = nbTrees * relativeSupport;
+		} else {
+			absoluteSupport = nodeCount * relativeSupport;
+		}
 		if (verbose) {
 			cout << "absolute support is set to " << absoluteSupport << endl;
 		}
