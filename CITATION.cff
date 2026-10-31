@@ -1,0 +1,52 @@
+# This CITATION.cff file was generated with the AADAGE repository metadata.
+# It follows the Citation File Format schema (https://citation-file-format.github.io/).
+# GitHub displays it automatically via the "Cite this repository" button.
+
+cff-version: 1.2.0
+title: AADAGE (Automorphism Aware Directed Attributed Graph Explorer)
+message: >-
+  If you use AADAGE, please cite the reference article describing the
+  method, and/or this software.
+type: software
+authors:
+  - affiliation: I3S Laboratory, CNRS, Université Côte d'Azur
+    email: claude.pasquier@univ-cotedazur.fr
+    family-names: Pasquier
+    given-names: Claude
+version: 1.0.0
+date-released: "2012-12-01"
+license: GPL-3.0-or-later
+repository-code: "https://github.com/claudepasquier/aadage"
+keywords:
+  - graph mining
+  - attributed graphs
+  - frequent pattern mining
+  - automorphism
+  - itemset mining
+abstract: >-
+  AADAGE extracts frequent patterns from one or more directed attributed
+  graphs, i.e. graphs in which nodes are associated with sets of attributes.
+  It reduces the combinatorial explosion induced by subgraph isomorphisms
+  thanks to an appropriate processing of automorphic patterns.
+preferred-citation:
+  type: article
+  title: "Attributed graph mining in the presence of automorphism"
+  authors:
+    - family-names: Pasquier
+      given-names: Claude
+      affiliation: I3S Laboratory, CNRS, Université Côte d'Azur
+    - family-names: Flouvat
+      given-names: Frédéric
+      affiliation: PPME, University of New Caledonia
+    - family-names: Sanhes
+      given-names: Jérémy
+      affiliation: PPME, University of New Caledonia / INSA Lyon
+    - family-names: Selmaoui-Folcher
+      given-names: Nazha
+      affiliation: PPME, University of New Caledonia
+  journal: Knowledge and Information Systems
+  publisher: Springer
+  volume: 50
+  pages: "569-584"
+  year: 2017
+  doi: "10.1007/s10115-016-0953-9"

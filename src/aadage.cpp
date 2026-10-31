@@ -33,7 +33,7 @@
 #include "limits.h"
 #include <sys/time.h>
 
-#include "graph.hh"
+#include "canonical.h"
 
 #include <unistd.h>
 
@@ -58,7 +58,7 @@ int absoluteSupport = 0;
 float relativeSupport = 0.0;
 int absoluteMaxSupport = INT_MAX;
 float relativeMaxSupport = 0.0;
-int maximumGap = -1;
+int maximumGap = 0;
 int maxDepth = -1;
 
 /* information on the datasets */
@@ -144,6 +144,10 @@ int processPatternFile(const string& fileName,
 		string line;
 		while (inFile.good()) {
 			getline(inFile, line);
+			size_t found = line.find("\r");
+			if (found != std::string::npos) {
+				line.erase(found);
+			}
 			deque<string> content; // to store tokens
 			split(line, content, " "); // split line
 			if (content.size() < 3)
@@ -185,6 +189,10 @@ int processInputFileSleuth(const string& fileName,
 		string line;
 		while (inFile.good()) {
 			getline(inFile, line);
+			size_t found = line.find("\r");
+			if (found != std::string::npos) {
+				line.erase(found);
+			}
 			deque<string> content; // to store tokens
 			split(line, content, " "); // split line
 			if (content.size() < 3)
@@ -302,7 +310,9 @@ int processInputFile(const string& fileName,
 				continue;
 			}
 			if ((line[0] == 'g') || (line[0] == 't') ||(line[0] == 'X')){
-				allNodes.push_back(nodes);
+				if (nodes.size() > 0) {
+					allNodes.push_back(nodes);
+				}
 				nodes.clear();
 				nodeId2pos.clear();
 				deque<string> content; // to store tokens
@@ -369,77 +379,11 @@ int processInputFile(const string& fileName,
 		}
 		inFile.close();
 		allNodes.push_back(nodes);
-		nbGraph += 1;
 		return (nbGraph);
 	} else {
 		return (-1);
 	}
 }
-int processInputFile_bak(const string& fileName,
-		vector<vector<NodeInfo> >& allNodes) {
-	ifstream inFile(fileName.c_str());
-	int nbTrees = 0;
-	if (inFile.is_open()) {
-		string line;
-		do {
-			getline(inFile, line);
-		} while(line[0]=='#');
-		while (inFile.good()) {
-			getline(inFile, line);
-			int nbNodes;
-			std::istringstream iss(line);
-			iss >> nbNodes;
-			vector<NodeInfo> nodes;
-			for (int i = 0 ; i < nbNodes ; i++) {
-				getline(inFile, line);
-				int idNode;
-				idNode = i;
-				NodeInfo node = NodeInfo(idNode, 1);
-
-				deque<string> labels; // to store different labels
-				split(line, labels, ":"); // collect different labels in labels;
-				set<int>* labelsSet = & node.labels;
-				for (deque<string>::const_iterator it = labels.begin(); it != labels.end();
-						it++) {
-					std::istringstream iss(*it);
-					int nodeLabel;
-					iss >> nodeLabel;
-					labelsSet->insert(nodeLabel);
-				}
-				if (labelsSet->size() > 1) {
-					itemSetMining = true;
-				}
-				nodes.push_back(node);
-			}
-			bool good = true;
-			while (good){
-				getline(inFile, line);
-				deque<string> content; // to store tokens
-				split(line, content, " "); // split line
-				if (content.size() < 2) {
-					allNodes.push_back(nodes);
-					nbTrees += 1;
-					break;
-				}
-				int branchId;
-				std::istringstream iss_bId(content[0]);
-				iss_bId >> branchId;
-				int fromNode;
-				std::istringstream iss_from(content[1]);
-				iss_from >> fromNode;
-				int toNode;
-				std::istringstream iss_to(content[2]);
-				iss_to >> toNode;
-				nodes[fromNode-1].childNodes.insert(toNode-1);
-			}
-		}
-		inFile.close();
-		return (nbTrees);
-	} else {
-		return (-1);
-	}
-}
-
 /**
  * Reads the first line of input file and determine its format
  * @param fileName the name of the file that contain the data.
@@ -505,24 +449,6 @@ bool isAncestor(const vector<NodeInfo>& listNodes, const int first,
 		}
 
 	}
-}
-
-string serialize(const vector<pair<set<int>, int> >& label) {
-	string text;
-	for (vector<pair<set<int>, int> >::const_iterator it = label.begin();
-			it != label.end(); it++) {
-		set<int> seq = (*it).first;
-		for (set<int>::const_iterator it2 = seq.begin(); it2 != seq.end(); it2++) {
-			std::ostringstream out;
-			out << *it2;
-			text += out.str() + ":";
-		}
-		std::ostringstream out;
-		out << (*it).second;
-		text += "/" + out.str();
-		text += " ";
-	}
-	return (text);
 }
 
 vector<string> serializeSubTree(const int treeId, const int nodeId, const vector<vector<NodeInfo> >& nodes) {
@@ -606,298 +532,6 @@ void writeSolutionForSearchPattern(const Candidates& candidates,
 	}
 }
 
-int getPreviousSibbling(const vector<pair<set<int>, int> >& label,
-		const int pos) {
-	int previousSibbling = pos - 1;
-	while (previousSibbling >= 0) {
-		if (label[previousSibbling].second == label[pos].second) {
-			return (previousSibbling);
-		}
-		if (label[previousSibbling].second < label[pos].second) {
-			return (-1);
-		}
-		previousSibbling -= 1;
-	}
-	return (previousSibbling);
-}
-
-int getParent(const vector<pair<set<int>, int> >& label, const int pos) {
-	int parentPos = pos - 1;
-	while (parentPos > 0) {
-		if (label[parentPos].second < label[pos].second) {
-			return (parentPos);
-		}
-		parentPos -= 1;
-	}
-	return (parentPos);
-}
-
-bool myComp(const set<int>& a, const set<int>& b) {
-	return (a < b);
-	set<int>::const_iterator it1 = a.begin();
-	set<int>::const_iterator it2 = b.begin();
-	while (it1 != a.end() && it2 != b.end()) {
-		if (*it1 == *it2) {
-			it1++;
-			it2++;
-			continue;
-		}
-		return (*it1 < *it2);
-	}
-	return (a.size() > b.size());
-}
-
-bool myComp2(const pair<set<int>, int>& a, const pair<set<int>, int>& b) {
-	if (a.second != b.second) {
-		return (a.second < b.second);
-	}
-	set<int>::const_iterator it1 = a.first.begin();
-	set<int>::const_iterator it2 = b.first.begin();
-	while (it1 != a.first.end() && it2 != b.first.end()) {
-		if (*it1 == *it2) {
-			it1++;
-			it2++;
-			continue;
-		}
-		return (*it1 < *it2);
-	}
-	return (a.first.size() > b.first.size());
-}
-
-bool myComp3(const set<int>& a, const set<int>& b) {
-	set<int>::const_iterator it1 = a.begin();
-	set<int>::const_iterator it2 = b.begin();
-	while (it1 != a.end() && it2 != b.end()) {
-		if (*it1 == *it2) {
-			it1++;
-			it2++;
-			continue;
-		}
-		return (*it1 < *it2);
-	}
-	return (a.size() > b.size());
-}
-
-/*
- *	Compare two substructures. One starting at pos1, the other at pos2
- *
- *	Return value:
- *	-1 if pos1 substructure is lower than pos2 substructure
- *	0  if both substructures are equal
- *	1  if pos1 substructure is greater than pos2 substructure
- *
- */
-
-int compareSubStructure(const vector<pair<set<int>, int> >& label, const int pos1,
-		const int pos2) {
-	int len1 = pos2 - pos1;
-	int len2 = label.size() - pos2;
-	if (len1 > len2) {
-		int minLen = min(len1, len2);
-		for (int j = 0; j < minLen; j++) {
-			if (*(label.begin() + pos1 + j) != *(label.begin() + pos2 + j)) {
-				break;
-			}
-		}
-		return (-1); // subtree
-	}
-	for (int j = 0; j < len1; j++) {
-		if (*(label.begin() + pos1 + j) == *(label.begin() + pos2 + j)) {
-			continue;
-		}
-		bool diffDepth = ((label.begin() + pos1 + j)->second
-				!= (label.begin() + pos2 + j)->second);
-		if (diffDepth != 0)
-			return (-1);
-		const set<int>* label1 = &(label.begin() + pos1 + j)->first;
-		const set<int>* label2 = &(label.begin() + pos2 + j)->first;
-			if (label1 < label2)
-				return (-1);
-			else if (label1 > label2)
-				return (1);
-	}
-	if (len1 > len2)
-		return (-1);
-	else if (len1 < len2)
-		return (1);
-	return (0);
-}
-
-/*
- *	test if a structures is in canonical form
- *
- *	Return value:
- *	-1 structure is in canonical form
- *	 0 structure is in canonical form but any extension done in the right hand path
- *	   will make it non canonical
- *	 1 structure is not in canonical form
- *
- */
-
-int isCanonical(const vector<pair<set<int>, int> >& lab) {
-	vector<pair<set<int>, int> > label = lab;
-	for (uint i = 0 ; i < label.size() ; i++){
-		if (*label[i].first.begin() < 0){
-			int indx = -*label[i].first.begin()-1;
-			label[i].first = label[indx].first;
-		}
-	}
-	bool previousSibblingFound = false;
-	bool identicalRightHand = true;
-	int posLastChild = label.size() - 1;
-	while (posLastChild > 0) {
-		int posOfPreviousSibbling = getPreviousSibbling(label, posLastChild);
-		if (posOfPreviousSibbling != -1) {
-			previousSibblingFound = true;
-		    int compare = compareSubStructure(label, posOfPreviousSibbling, posLastChild);
-		     if (compare == 1)
-			     return (1);
-		     else if (compare == -1)
-			     identicalRightHand = false;
-		}
-		posLastChild = getParent(label, posLastChild);
-	}
-	if (identicalRightHand && previousSibblingFound)
-		return (0);
-
-	return (-1);
-}
-
-int isCycleCanonical(const vector<pair<set<int>, int> >& lab) {
-	// test of canonical form in the presence of cycles
-		vector<pair<set<int>, int> > label = lab;
-		bool normalForm = true;
-		for (uint i = 0 ; i < lab.size()-2 ; i++){
-			//shift
-			pair<set<int>, int> bk1 = label.back();
-			label.pop_back();
-			pair<set<int>, int> bk2 = label.back();
-			label.pop_back();
-			bool stopShifting = false;
-			for (uint j = 0 ; j < label.size() ; j++){
-				if (*label[j].first.begin() < 0){
-					int a = *label[j].first.begin();
-					if (a < 0){
-						label[j].first.clear();
-						label[j].first.insert(a - 1);
-						label[j].first.insert(999);
-
-					}
-				}
-				label[j].second += 1;
-			}
-			if (stopShifting){
-				break;
-			}
-			bk1.second = bk2.second+1;
-			bk2.second = 0;
-			label.insert(label.begin(),bk2);
-			if (*label[0].first.begin() < 0){
-				int a = -*label[0].first.begin()-1;
-				label[0].first = label[a].first;
-				label[a].first.clear();
-				label[a].first.insert(-1);
-				label[a].first.insert(999);
-			}
-			label.push_back(bk1);
-			bool found_smallest = false;
-			for (uint j = 0 ; j < label.size()-1 ; j++){
-				if (lab[j].second < label[j].second){
-					found_smallest = true;
-					break;
-				} else if (lab[j].second > label[j].second){
-					found_smallest = false;
-					break;
-				}
-
-				if (lab[j].first > label[j].first){
-					found_smallest = true;
-					break;
-				}
-				else if (lab[j].first < label[j].first){
-					found_smallest = false;
-					break;
-				}
-			}
-			if (found_smallest && isCanonical(label)){
-				normalForm = false;
-				break;
-			}
-		}
-		if (normalForm){
-			return (-1);
-		} else {
-			return (1);
-		}
-	}
-
-bool isCanonical2(const vector<pair<set<int>, int> >& label) {
-	if (label.size() == 1){
-		return (true);
-	}
-	map<set<int>, int> attributes2int;
-
-	vector<set<int> > attributes;
-	for (vector<pair<set<int>, int> >::const_iterator it = label.begin() ; it != label.end() ; it++) {
-		if (*it->first.begin() >= 0)
-			attributes2int[it->first]=0;
-			attributes.push_back(it->first);
-	}
-
-
-	std::sort(attributes.begin(), attributes.end(), myComp3);
-
-	for (int i = 0; i < (int) attributes.size(); i++) {
-		attributes2int[attributes[i]] = i;
-	}
-
-
-	bliss::Digraph g = bliss::Digraph(0);
-	g.set_splitting_heuristic(bliss::Digraph::shs_fm);
-
-
-	int depth = -1;
-	vector<int> path;
-	map<int, int> nodeId2vertex;
-	for (int i = 0; i < (int) label.size(); i++) {
-		int vertex;
-		if (*label[i].first.begin() < 0){
-			// an edge to an existing vertex
-			vertex = nodeId2vertex[-(*label[i].first.begin())];
-		}else{
-			vertex = g.add_vertex(attributes2int[label[i].first]);
-			nodeId2vertex[i]=vertex;
-		}
-		if (label[i].second <= depth) {
-			for (int j = label[i].second; j <= depth; j++) {
-				path.pop_back();
-			}
-		}
-
-		if (path.size() > 0) {
-			g.add_edge(path.back(), vertex);
-		}
-		path.push_back(vertex);
-		depth = label[i].second;
-	}
-	FILE *fp = fopen("f1", "w");
-	g.write_dimacs(fp);
-	fclose(fp);
-
-	bliss::Stats stats;
-	const unsigned int *cl = g.canonical_form(stats, NULL, NULL);
-	cout << "==>cl=" << *cl << endl;
-	bliss::Digraph *cf = g.permute(cl);
-	FILE *fp2 = fopen("f2", "w");
-	cf->write_dimacs(fp2);
-	fclose(fp2);
-	if (cf->cmp(g) == 0){
-		return (true);
-	} else{
-		return (false);
-	}
-}
-
 
 int matchesPattern(Candidates& candidates, CandidateInfo& candidateInfo,
 		const vector<pair<set<int>, int> >& label,
@@ -939,6 +573,7 @@ bool containsPattern(Candidates& candidates,
 
 int countMotifs(const vector<SequenceInfo>* values) {
 	int count = 0;
+	// cout << "DEBUG: count method values.size()=" << values->size() << endl;
 	if (countUnique) {
 		// one occurence per tree
 		set<int> differentTrees;
@@ -952,7 +587,12 @@ int countMotifs(const vector<SequenceInfo>* values) {
 	} else {
 		count = INT_MAX;
 		// method of Njissen
+		// cout << "start pre-Njissen" << endl;
+		// if (values->size() == 0) {return(0);}
+		// cout << values->size() << endl;
+		// cout << values->at(0) << endl;
 		vector<set<pair<int,int> > > differentNodes (values->at(0).getSize());
+		// cout << "start Njissen" << endl;
 		for (vector<SequenceInfo>::const_iterator sii = values->begin();
 				sii != values->end(); sii++) {
 			if ((*sii).getNbTree() >= patternsCount){
@@ -964,6 +604,7 @@ int countMotifs(const vector<SequenceInfo>* values) {
 		for (vector<set<pair<int,int> > >::iterator it = differentNodes.begin() ; it != differentNodes.end() ; it++){
 			count = min(count, (int)it->size());
 		}
+		// cout << "end Njissen: count=" << count << endl;
 	}
 	return (count);
 }
@@ -1150,6 +791,9 @@ void extendFirstCandidate(Candidates& candidates, const vector<vector<NodeInfo> 
 	const vector<pair<set<int>, int> >* label = &candi->first;
 	CandidateInfo* candidateInfo = candi->second;
 	vector<SequenceInfo>* values = &(candi->second->subtrees);
+	// vector<pair<set<int>, int> > labelPath = *label
+	vector<pair<vector<pair<set<int>, int> >, CandidateInfo* > > cc = candidates.currentCandidates;
+	// cout << "DEBUG: analysing candidate: " << serialize(*label) << "out of " << cc.size() << endl;
 
 		if (patternSearch) {
 			if (!containsPattern(candidates, *label)) {
@@ -1160,9 +804,11 @@ void extendFirstCandidate(Candidates& candidates, const vector<vector<NodeInfo> 
 
 	int count = countMotifs(values);
 	int nbOfOccurences = getNbOccurences(values);
-	bool iscanonical1 = (isCanonical(*label) == -1);
+	// cout << "DEBUG: count= " << count << " nbOfOccurences= " << nbOfOccurences << endl;
+	// bool iscanonical1 = (isCanonical(*label) == -1);
 
 	if (count < absoluteSupport) {
+		// cout << "DEBUG: not frequent, remove dandidate" << endl;
 		candidates.removeCandidate(false);
 		return;
 	}
@@ -1173,8 +819,10 @@ void extendFirstCandidate(Candidates& candidates, const vector<vector<NodeInfo> 
 		// test the canonicity of a pattern with cycle
 		canonicalCycle = isCycleCanonical(*label);
 	}
-
+	
 	if (!orderedSearch && ((canonical == 1) || (canonicalCycle ==1))) {
+		// cout << "DEBUG: not canonical, remove it " << endl;
+		// cout << "DEBUG: ------------WRONG 1------------ " << endl;
 		candidates.removeCandidate(false);
 		return;
 	}
@@ -1230,7 +878,9 @@ void extendFirstCandidate(Candidates& candidates, const vector<vector<NodeInfo> 
 			values->insert(values->end(),newValue.begin(),newValue.end());
 		}
 	}
-	bool newOptimisation = true;
+	// cout << "DEBUG: extensionOfLastNodeAllowed should always be true =" << extensionOfLastNodeAllowed << endl;
+
+	bool newOptimisation = false;
 	if (newOptimisation){
 		if ((label->back().second == 1) && (label->back().first.size() ==1)){
 			const int pos = label->size()-1;
@@ -1252,12 +902,12 @@ void extendFirstCandidate(Candidates& candidates, const vector<vector<NodeInfo> 
 					}
 				}
 				if (verbose) cout << "reduction of instances(opt1)" << values->size() << " to " << newValue.size() << endl;
+				cout << "OPTIM : reduction of instances(opt1)" << values->size() << " to " << newValue.size() << endl;
 				values->clear();
 				values->insert(values->begin(),newValue.begin(),newValue.end());
 			}
 		}
 	}
-
 	bool newOptimisation2 = true;
 	if (newOptimisation2){
 		vector<int> rightPathElts;
@@ -1302,6 +952,7 @@ void extendFirstCandidate(Candidates& candidates, const vector<vector<NodeInfo> 
 
 		}
 	}
+	
 	bool closedCandidate = false;
 	if (closedItemsetSearch && itemSetMining) {
 		pair<int, int> inheritedCount = getInheritedCount(candidates, *label);
@@ -1321,7 +972,6 @@ void extendFirstCandidate(Candidates& candidates, const vector<vector<NodeInfo> 
 			closedCandidate = true;
 		}
 	}
-
 	if (itemSetMining && extensionOfLastNodeAllowed) {
 		map<int, vector<SequenceInfo>* > memoLp;
 
@@ -1348,8 +998,9 @@ void extendFirstCandidate(Candidates& candidates, const vector<vector<NodeInfo> 
 							}
 							pvsi = &candidates.newCandidates[labelPath].subtrees;
 							memoLp[*labelIt] = pvsi;
+							// cout <<"DEBUG: add new candidate_1 : " << serialize(labelPath) << endl;
 							if (verbose){
-								cout <<"generated pattern : " << serialize(labelPath) << endl;
+								cout <<"generated pattern1 : " << serialize(labelPath) << endl;
 							}
 						}
 						vector<int> path = (*c).getPathList();
@@ -1359,7 +1010,7 @@ void extendFirstCandidate(Candidates& candidates, const vector<vector<NodeInfo> 
 				}
 			}
 		}
-
+	
 		if (closedItemsetSearch) {
 			bool identicalSuperset = false;
 
@@ -1370,7 +1021,9 @@ void extendFirstCandidate(Candidates& candidates, const vector<vector<NodeInfo> 
 				if (getNbOccurencesByLabel(candidates, *supIt) == nbOfOccurences) {
 					identicalSuperset = true;
 				}
+				// cout << "DEBUG: ident superset " << getNbOccurencesByLabel(candidates, *supIt) << " " << nbOfOccurences << endl;
 				if (countMotifsByLabel(candidates, *supIt) == count) {
+					// cout << "DEBUG: " << count << "  " << countMotifsByLabel(candidates, *supIt) << " " << identicalSuperset << endl;
 					closedCandidate = true;
 
 					if (closedSequenceSearch) {
@@ -1384,7 +1037,11 @@ void extendFirstCandidate(Candidates& candidates, const vector<vector<NodeInfo> 
 			// has the same occurence of the current pattern, then, the extension of
 			// the current pattern is not needed
 			// in addition, the current pattern is redundant
+			// cout << "DEBUG: tag closed " << closedCandidate << " " << identicalSuperset << endl;
 			if (identicalSuperset) {
+			// if (closedCandidate || identicalSuperset) {
+				// cout <<"DEBUG: closed candidate. remove parent" << endl;
+			
 				candidates.removeNewCandidate(*label);
 				if (closedSequenceSearch) {
 					candidates.setClosed(candidateInfo);
@@ -1416,6 +1073,8 @@ void extendFirstCandidate(Candidates& candidates, const vector<vector<NodeInfo> 
 
 	if (outputFrequentTrees && !closedCandidate && !closedSequenceSearch) {
 		if (!patternSearch) {
+			// cout << serialize(*label) << endl;
+			// cout << count << endl;
 			writeSolution(candidates, *label, count);
 		} else {
 			int basePattern = matchesPattern(candidates, *candidateInfo, *label, listNodes);
@@ -1503,8 +1162,10 @@ void extendFirstCandidate(Candidates& candidates, const vector<vector<NodeInfo> 
 
 						pvsi = &candidates.newCandidates[labelPath].subtrees;
 						memoLp[pair<int, int>(reentrantCode, depth)] = pvsi;
+						// cout <<"DEBUG: add new candidate_2 : " << serialize(labelPath) << endl;
+
 						if (verbose){
-							cout <<"generated pattern : " << serialize(labelPath) << endl;
+							cout <<"generated pattern2 : " << serialize(labelPath) << endl;
 						}
 					}
 					vector<int> path = (*c).getPathList();
@@ -1545,8 +1206,9 @@ void extendFirstCandidate(Candidates& candidates, const vector<vector<NodeInfo> 
 
 						pvsi = &candidates.newCandidates[labelPath].subtrees;
 						memoLp[pair<int, int>(*labelIt, depth)] = pvsi;
+						// cout <<"DEBUG: add new candidate_3 : " << serialize(labelPath) << endl;
 						if (verbose){
-							cout <<"generated pattern : " << serialize(labelPath) << endl;
+							cout <<"generated pattern3 : " << serialize(labelPath) << endl;
 						}
 
 					}
@@ -1676,8 +1338,10 @@ void extendFirstCandidate(Candidates& candidates, const vector<vector<NodeInfo> 
 
 						pvsi = &candidates.newCandidates[labelPath].subtrees;
 						memoLp[pair<int, int>(reentrantCode, depth)] = pvsi;
+						// cout <<"DEBUG: add new candidate_4 : " << serialize(labelPath) << endl;
+
 						if (verbose){
-							cout <<"generated pattern : " << serialize(labelPath) << endl;
+							cout <<"generated pattern4 : " << serialize(labelPath) << endl;
 						}
 					}
 
@@ -1724,15 +1388,21 @@ void extendFirstCandidate(Candidates& candidates, const vector<vector<NodeInfo> 
 						}
 						pvsi = &candidates.newCandidates[labelPath].subtrees;
 						memoLp[pair<int, int>(*labelIt, depth)] = pvsi;
+						if (isCanonical(*label) != 1){
+							
+						
+						// cout <<"DEBUG: add new candidate_5 : " << serialize(labelPath) << endl;
 						if (verbose){
-							cout <<"generated pattern : " << serialize(labelPath) << endl;
+							cout <<"generated pattern5 : " << serialize(labelPath) << endl;
+						}
 						}
 					}
-
+					// if (!orderedSearch && labelsGeneratingCanonicalPatterns[parentPos].count(*labelIt) != 0){
 					vector<int> path = (*c).getPathList();
 					path.push_back(*it);
 					SequenceInfo si = SequenceInfo((*c).getNbTree(), path);
 					pvsi->push_back(si);
+					// }
 				}
 			}
 			lastChildPos = parentPos;
@@ -1740,7 +1410,9 @@ void extendFirstCandidate(Candidates& candidates, const vector<vector<NodeInfo> 
 			parentDepth = (*label)[parentPos].second;
 			excludedNodes.clear();
 		}
+
 	}
+
 	candidates.removeCandidate(closedItemsetSearch || closedSequenceSearch);
 	return;
 }
@@ -1968,18 +1640,22 @@ int initializeInputNodes(const string& fileName,
 		cout << "problem reading file '" << inputFile << "'" << endl;
 		return (-1);
 	}
+	int nodeCount = 0;
+	for (vector<vector<NodeInfo> >::const_iterator it = inputNodes.begin();
+		it != inputNodes.end(); it++) {
+		nodeCount += it->size();
+	}
 	if (verbose) {
 		cout << "size of dataset : " << datasetSize << endl;
-		int nodeCount = 0;
-		for (vector<vector<NodeInfo> >::const_iterator it = inputNodes.begin();
-				it != inputNodes.end(); it++) {
-			nodeCount += it->size();
-		}
 		cout << "total number of nodes : " << nodeCount << endl;
 	}
 
 	if (relativeSupport > 0) {
-		absoluteSupport = inputNodes.size() * relativeSupport;
+		if (countUnique) {
+			absoluteSupport = nbTrees * relativeSupport;
+		} else {
+			absoluteSupport = nodeCount * relativeSupport;
+		}
 		if (verbose) {
 			cout << "absolute support is set to " << absoluteSupport << endl;
 		}

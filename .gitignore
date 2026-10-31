@@ -30,3 +30,11 @@
 *.exe
 *.out
 *.app
+
+# project executables
+/aadage
+/tests/test_canonical
+/tests/test_*/
+/include/bliss-0.72/bliss
+/include/bliss-0.72/*.o
+/include/bliss-0.72/libbliss.a
